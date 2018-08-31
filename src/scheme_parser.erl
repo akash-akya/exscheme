@@ -2,6 +2,8 @@
 -export([parse/1, parse_and_scan/1, format_error/1]).
 -file("src/scheme_parser.yrl", 16).
 
+extract_token({_Token, _Line, Value}) -> Value.
+
 -file("/usr/local/Cellar/erlang/20.3.6/lib/erlang/lib/parsetools-2.1.6/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
@@ -175,7 +177,7 @@ yecctoken2string(Other) ->
 
 
 
--file("src/scheme_parser.erl", 178).
+-file("src/scheme_parser.erl", 180).
 
 -dialyzer({nowarn_function, yeccpars2/7}).
 yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -258,13 +260,16 @@ yeccpars2_6(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccgoto_list(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_7(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccgoto_elem(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
+ NewStack = yeccpars2_7_(Stack),
+ yeccgoto_elem(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 yeccpars2_8(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccgoto_elem(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
+ NewStack = yeccpars2_8_(Stack),
+ yeccgoto_elem(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 yeccpars2_9(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccgoto_elem(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
+ NewStack = yeccpars2_9_(Stack),
+ yeccgoto_elem(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 yeccpars2_10(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_|Nss] = Ss,
@@ -312,6 +317,30 @@ yeccpars2_6_(__Stack0) ->
    [ ]
   end | __Stack].
 
+-compile({inline,yeccpars2_7_/1}).
+-file("src/scheme_parser.yrl", 7).
+yeccpars2_7_(__Stack0) ->
+ [__1 | __Stack] = __Stack0,
+ [begin
+   extract_token ( __1 )
+  end | __Stack].
+
+-compile({inline,yeccpars2_8_/1}).
+-file("src/scheme_parser.yrl", 9).
+yeccpars2_8_(__Stack0) ->
+ [__1 | __Stack] = __Stack0,
+ [begin
+   extract_token ( __1 )
+  end | __Stack].
+
+-compile({inline,yeccpars2_9_/1}).
+-file("src/scheme_parser.yrl", 8).
+yeccpars2_9_(__Stack0) ->
+ [__1 | __Stack] = __Stack0,
+ [begin
+   extract_token ( __1 )
+  end | __Stack].
+
 -compile({inline,yeccpars2_10_/1}).
 -file("src/scheme_parser.yrl", 5).
 yeccpars2_10_(__Stack0) ->
@@ -329,4 +358,4 @@ yeccpars2_11_(__Stack0) ->
   end | __Stack].
 
 
--file("src/scheme_parser.yrl", 17).
+-file("src/scheme_parser.yrl", 19).
