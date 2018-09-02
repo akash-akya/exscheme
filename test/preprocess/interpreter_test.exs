@@ -56,12 +56,16 @@ defmodule Exscheme.InterpreterTest do
   end
 
   test "cond" do
-    expr = "(cond ((= 2 3) 1) ((= 1 1) 2))"
+    expr = "(cond ((= 2 1) 1) ((= 2 2) 2))"
     {result, _env} = interprete(expr)
     assert result == 2
 
-    expr = "(cond ((= 2 2) 1) ((= 1 1) 2))"
+    expr = "(cond ((= 1 1) 1) ((= 2 2) 2))"
     {result, _env} = interprete(expr)
     assert result == 1
+
+    expr = "(cond ((= 0 1) 1) ((= 0 2) 2) (else 3))"
+    {result, _env} = interprete(expr)
+    assert result == 3
   end
 end

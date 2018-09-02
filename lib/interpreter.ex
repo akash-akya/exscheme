@@ -43,7 +43,7 @@ defmodule Exscheme.Interpreter do
 
       [:cond | body] ->
         [[predicate | actions] | rest] = body
-        Predicate.eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, env)
+        eval_cond(predicate, actions, rest, env)
 
       [operator | operands] ->
         {procedure, env} = eval(operator, env)
@@ -61,6 +61,14 @@ defmodule Exscheme.Interpreter do
   def scheme_apply(%Procedure{} = procedure, arguments) do
     frame = Env.create_frame(procedure.params, arguments)
     eval_sequence(procedure.body, [frame | procedure.env])
+  end
+
+  defp eval_cond(predicate, actions, rest, env) do
+    if(predicate == :else) do
+      eval([:begin | actions], env)
+    else
+      Predicate.eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, env)
+    end
   end
 
   defp eval_sequence([], _env), do: nil
