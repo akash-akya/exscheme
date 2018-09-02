@@ -12,44 +12,43 @@ defmodule Exscheme.Interpreter do
     |> eval([Primitives.get_primitives()])
   end
 
-  def eval(exp, env) when is_number(exp) or is_binary(exp), do: {exp, env}
+  def eval(exp, env) do
+    case exp do
+      exp when is_number(exp) or is_binary(exp) ->
+        {exp, env}
 
-  def eval(exp, env) when is_atom(exp), do: {Env.find_variable(exp, env), env}
+      exp when is_atom(exp) ->
+        {Env.find_variable(exp, env), env}
 
-  def eval([:quote | body], env), do: {body, env}
+      [:quote | body] ->
+        {body, env}
 
-  def eval([:set!, variable, value], env) do
-    {:ok, Env.set_variable(variable, &eval(value, &1), env)}
-  end
+      [:set!, variable, value] ->
+        {:ok, Env.set_variable(variable, &eval(value, &1), env)}
 
-  def eval([:define, [function_name | params] | body], env) do
-    {:ok, Env.define(function_name, &eval([:lambda, params | body], &1), env)}
-  end
+      [:define, [function_name | params] | body] ->
+        {:ok, Env.define(function_name, &eval([:lambda, params | body], &1), env)}
 
-  def eval([:define, variable, value], env) do
-    {:ok, Env.define(variable, &eval(value, &1), env)}
-  end
+      [:define, variable, value] ->
+        {:ok, Env.define(variable, &eval(value, &1), env)}
 
-  def eval([:if, predicate, consequent, alternative], env) do
-    Predicate.eval_if(predicate, consequent, alternative, &eval/2, env)
-  end
+      [:if, predicate, consequent, alternative] ->
+        Predicate.eval_if(predicate, consequent, alternative, &eval/2, env)
 
-  def eval([:lambda, params | body], env) do
-    {Procedure.new(params, body, env), env}
-  end
+      [:lambda, params | body] ->
+        {Procedure.new(params, body, env), env}
 
-  def eval([:begin | actions], env) do
-    {eval_sequence(actions, env), env}
-  end
+      [:begin | actions] ->
+        {eval_sequence(actions, env), env}
 
-  def eval([:cond | body], env) do
-    [[predicate | actions] | rest] = body
-    Predicate.eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, env)
-  end
+      [:cond | body] ->
+        [[predicate | actions] | rest] = body
+        Predicate.eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, env)
 
-  def eval([operator | operands], env) do
-    {procedure, env} = eval(operator, env)
-    {scheme_apply(procedure, get_values(operands, env)), env}
+      [operator | operands] ->
+        {procedure, env} = eval(operator, env)
+        {scheme_apply(procedure, get_values(operands, env)), env}
+    end
   end
 
   defp get_values(operands, env), do: Enum.map(operands, &(eval(&1, env) |> elem(0)))
