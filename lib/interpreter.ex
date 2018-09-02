@@ -52,9 +52,7 @@ defmodule Exscheme.Interpreter do
     {scheme_apply(procedure, get_values(operands, env)), env}
   end
 
-  defp get_values(operands, env), do: Enum.map(operands, &get_value(&1, env))
-
-  defp get_value(expr, env), do: eval(expr, env) |> elem(0)
+  defp get_values(operands, env), do: Enum.map(operands, &(eval(&1, env) |> elem(0)))
 
   # apply
   def scheme_apply([:primitive, procedure], arguments) do
