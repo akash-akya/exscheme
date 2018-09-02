@@ -14,9 +14,9 @@ defmodule Exscheme.InterpreterTest do
   end
 
   test "lambda" do
-    expr = "(begin (define (a x) (+ 1 x)) (a 10))"
+    expr = "(begin (define (a x) (+ 1 x)) (a 30))"
     {result, _env} = interprete(expr)
-    assert result == 11
+    assert result == 31
   end
 
   test "begin" do
