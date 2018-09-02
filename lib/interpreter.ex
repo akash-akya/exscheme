@@ -2,6 +2,7 @@ defmodule Exscheme.Interpreter do
   alias Exscheme.Preprocess.Parser
   alias Exscheme.Core.Primitives
   alias Exscheme.Core.Procedure
+  alias Exscheme.Core.Predicate
   alias Exscheme.Core.Environment, as: Env
   require Logger
 
@@ -30,7 +31,7 @@ defmodule Exscheme.Interpreter do
   end
 
   def eval([:if, predicate, consequent, alternative], env) do
-    eval_if(predicate, consequent, alternative, env)
+    Predicate.eval_if(predicate, consequent, alternative, &eval/2, env)
   end
 
   def eval([:lambda, params | body], env) do
@@ -41,7 +42,10 @@ defmodule Exscheme.Interpreter do
     {eval_sequence(actions, env), env}
   end
 
-  def eval([:cond | _body], _env), do: :ok
+  def eval([:cond | body], env) do
+    [[predicate | actions] | rest] = body
+    Predicate.eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, env)
+  end
 
   def eval([operator | operands], env) do
     {procedure, env} = eval(operator, env)
@@ -61,19 +65,6 @@ defmodule Exscheme.Interpreter do
     frame = Env.create_frame(procedure.params, arguments)
     eval_sequence(procedure.body, [frame | procedure.env])
   end
-
-  defp eval_if(predicate, consequent, alternative, env) do
-    if is_true(eval(predicate, env)) do
-      consequent
-    else
-      alternative
-    end
-    |> eval(env)
-  end
-
-  defp is_true(false), do: false
-
-  defp is_true(true), do: true
 
   defp eval_sequence([], _env), do: nil
 

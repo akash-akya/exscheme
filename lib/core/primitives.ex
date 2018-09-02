@@ -5,15 +5,15 @@ defmodule Exscheme.Core.Primitives do
 
   def apply_primitive(:cons, [first, rest]), do: [first | rest]
 
-  def apply_primitive(:+, arguments) do
-    apply(Kernel, :+, arguments)
+  def apply_primitive(:null?, arguments), do: is_nil(arguments)
+
+  def apply_primitive(oper, arguments) do
+    apply(Kernel, oper, arguments)
   end
 
-  def apply_primitive(:-, arguments), do: apply(Kernel, :-, arguments)
+  # def apply_primitive(:-, arguments), do: apply(Kernel, :-, arguments)
 
-  def apply_primitive(:*, arguments), do: apply(Kernel, :*, arguments)
-
-  def apply_primitive(:null?, arguments), do: is_nil(arguments)
+  # def apply_primitive(:*, arguments), do: apply(Kernel, :*, arguments)
 
   def get_primitives() do
     %{
@@ -23,6 +23,9 @@ defmodule Exscheme.Core.Primitives do
       +: [:primitive, :+],
       -: [:primitive, :-],
       *: [:primitive, :*],
+      >: [:primitive, :>],
+      <: [:primitive, :<],
+      =: [:primitive, :==],
       null?: [:primitive, :null?]
     }
   end
