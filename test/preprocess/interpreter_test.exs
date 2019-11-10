@@ -19,6 +19,12 @@ defmodule Exscheme.InterpreterTest do
     assert result == 2000
   end
 
+  test "fact" do
+    expr = "(begin (define fact (lambda (n) (if (< n 2) 1 (* n (fact (- n 1)))))) (fact 4))"
+    {result, _env} = interprete(expr)
+    assert result == 24
+  end
+
   test "define" do
     expr = "(begin (define num 10) num)"
     {result, _env} = interprete(expr)

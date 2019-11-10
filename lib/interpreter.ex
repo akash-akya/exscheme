@@ -9,7 +9,7 @@ defmodule Exscheme.Interpreter do
   def interprete(str) do
     str
     |> Parser.parse()
-    |> eval([Primitives.get_primitives()])
+    |> eval(Env.push_new_frame(%Env{}, Primitives.get_primitives()))
   end
 
   def eval(exp, env) do
@@ -36,7 +36,7 @@ defmodule Exscheme.Interpreter do
         Predicate.eval_if(predicate, consequent, alternative, &eval/2, env)
 
       [:lambda, params | body] ->
-        {Procedure.new(params, body, env), env}
+        {Procedure.new(params, body, env.current), env}
 
       [:begin | actions] ->
         {eval_sequence(actions, env), env}
@@ -47,20 +47,20 @@ defmodule Exscheme.Interpreter do
 
       [operator | operands] ->
         {procedure, env} = eval(operator, env)
-        {scheme_apply(procedure, get_values(operands, env)), env}
+        {scheme_apply(procedure, get_values(operands, env), env), env}
     end
   end
 
   defp get_values(operands, env), do: Enum.map(operands, &(eval(&1, env) |> elem(0)))
 
   # apply
-  def scheme_apply([:primitive, procedure], arguments) do
+  def scheme_apply([:primitive, procedure], arguments, _env) do
     Primitives.apply_primitive(procedure, arguments)
   end
 
-  def scheme_apply(%Procedure{} = procedure, arguments) do
-    frame = Env.create_frame(procedure.params, arguments)
-    eval_sequence(procedure.body, [frame | procedure.env])
+  def scheme_apply(%Procedure{} = procedure, arguments, env) do
+    proc_env = %Env{env | current: procedure.current_frame}
+    eval_sequence(procedure.body, Env.push_new_frame(proc_env, procedure.params, arguments))
   end
 
   defp eval_cond(predicate, actions, rest, env) do
