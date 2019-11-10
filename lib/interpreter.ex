@@ -6,7 +6,7 @@ defmodule Exscheme.Interpreter do
   alias Exscheme.Core.Environment, as: Env
   require Logger
 
-  def interprete(str) do
+  def interpret(str) do
     str
     |> Parser.parse()
     |> eval(Env.push_new_frame(%Env{}, Primitives.get_primitives()))
