@@ -48,13 +48,8 @@ defmodule Exscheme.Core.Environment do
     end
   end
 
-  def push_new_frame(env, params, args) do
-    data = Enum.zip(params, args) |> Map.new()
-    push_new_frame(env, data)
-  end
-
-  def push_new_frame(%Environment{} = env, data) do
-    Environment.add_frame(env, %Frame{data: data, parent: env.current})
+  def push_new_frame(%Environment{} = env, data, parent) do
+    add_frame(env, %Frame{data: data, parent: parent})
   end
 
   def find_variables(params, env) do

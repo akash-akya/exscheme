@@ -25,6 +25,12 @@ defmodule Exscheme.InterpreterTest do
     assert result == 24
   end
 
+  test "nested function" do
+    expr = "(begin (define higher (lambda (x) (lambda (y) (+ x y)))) ((higher 20) 10))"
+    {result, _env} = interpret(expr)
+    assert result == 30
+  end
+
   test "define" do
     expr = "(begin (define num 10) num)"
     {result, _env} = interpret(expr)

@@ -7,9 +7,11 @@ defmodule Exscheme.Interpreter do
   require Logger
 
   def interpret(str) do
+    env = %Env{}
+
     str
     |> Parser.parse()
-    |> eval(Env.push_new_frame(%Env{}, Primitives.get_primitives()))
+    |> eval(Env.push_new_frame(env, Primitives.get_primitives(), env.current))
   end
 
   def eval(exp, env) do
@@ -39,7 +41,7 @@ defmodule Exscheme.Interpreter do
         {Procedure.new(params, body, env.current), env}
 
       [:begin | actions] ->
-        {eval_sequence(actions, env), env}
+        eval_sequence(actions, env)
 
       [:cond | body] ->
         [[predicate | actions] | rest] = body
@@ -47,20 +49,23 @@ defmodule Exscheme.Interpreter do
 
       [operator | operands] ->
         {procedure, env} = eval(operator, env)
-        {scheme_apply(procedure, get_values(operands, env), env), env}
+        scheme_apply(procedure, get_values(operands, env), env)
     end
   end
 
   defp get_values(operands, env), do: Enum.map(operands, &(eval(&1, env) |> elem(0)))
 
   # apply
-  def scheme_apply([:primitive, procedure], arguments, _env) do
-    Primitives.apply_primitive(procedure, arguments)
+  def scheme_apply([:primitive, procedure], arguments, env) do
+    {Primitives.apply_primitive(procedure, arguments), env}
   end
 
   def scheme_apply(%Procedure{} = procedure, arguments, env) do
-    proc_env = %Env{env | current: procedure.current_frame}
-    eval_sequence(procedure.body, Env.push_new_frame(proc_env, procedure.params, arguments))
+    current = env.current
+    frame_data = Enum.zip(procedure.params, arguments) |> Map.new()
+    env = Env.push_new_frame(env, frame_data, procedure.current_frame)
+    {value, env} = eval_sequence(procedure.body, env)
+    {value, %Env{env | current: current}}
   end
 
   defp eval_cond(predicate, actions, rest, env) do
@@ -71,10 +76,12 @@ defmodule Exscheme.Interpreter do
     end
   end
 
-  defp eval_sequence([], _env), do: nil
+  defp eval_sequence(actions, env), do: eval_sequence(actions, env, nil)
 
-  defp eval_sequence([action | remaining_actions], env) do
+  defp eval_sequence([], env, value), do: {value, env}
+
+  defp eval_sequence([action | remaining_actions], env, _value) do
     {value, env} = eval(action, env)
-    eval_sequence(remaining_actions, env) || value
+    eval_sequence(remaining_actions, env, value)
   end
 end
