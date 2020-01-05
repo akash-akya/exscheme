@@ -26,7 +26,8 @@ defmodule Exscheme.Interpreter do
         {body, env}
 
       [:set!, variable, value] ->
-        {:ok, Env.set_variable(variable, &eval(value, &1), env)}
+        {v, env} = eval(value, env)
+        {:ok, Env.set_variable(variable, v, env)}
 
       [:define, [function_name | params] | body] ->
         {:ok, Env.define(function_name, &eval([:lambda, params | body], &1), env)}
@@ -49,13 +50,21 @@ defmodule Exscheme.Interpreter do
 
       [operator | operands] ->
         {procedure, env} = eval(operator, env)
-        scheme_apply(procedure, get_values(operands, env), env)
+        {values, env} = get_values(operands, env)
+        scheme_apply(procedure, values, env)
     end
   end
 
-  defp get_values(operands, env), do: Enum.map(operands, &(eval(&1, env) |> elem(0)))
+  defp get_values(operands, env) do
+    {result, env} =
+      Enum.reduce(operands, {[], env}, fn operand, {result, env} ->
+        {value, env} = eval(operand, env)
+        {[value | result], env}
+      end)
 
-  # apply
+    {Enum.reverse(result), env}
+  end
+
   def scheme_apply([:primitive, procedure], arguments, env) do
     {Primitives.apply_primitive(procedure, arguments), env}
   end

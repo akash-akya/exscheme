@@ -13,7 +13,7 @@ defmodule Exscheme.InterpreterTest do
     assert result == 201
 
     expr = "(begin (define name \"something: \\\" (+ 2 3)\") name)"
-    {result, env} = interpret(expr)
+    {result, _env} = interpret(expr)
     assert result == "something: \\\" (+ 2 3)"
   end
 
@@ -27,6 +27,33 @@ defmodule Exscheme.InterpreterTest do
     expr = "(begin (define fact (lambda (n) (if (< n 2) 1 (* n (fact (- n 1)))))) (fact 4))"
     {result, _env} = interpret(expr)
     assert result == 24
+  end
+
+  test "closure" do
+    expr = """
+    (begin
+      (define create-adder
+        (lambda (num)
+          (lambda (n) (+ num n))))
+      (define adder-2 (create-adder 2))
+      (adder-2 10))
+    """
+
+    {result, _env} = interpret(expr)
+    assert result == 12
+
+    expr = """
+    (begin
+      (define counter
+        (lambda (num)
+          (lambda (n) (set! num (+ num n)) num)))
+      (define c (counter 2))
+      (c 10)
+      (c 10))
+    """
+
+    {result, _env} = interpret(expr)
+    assert result == 22
   end
 
   test "nested function" do

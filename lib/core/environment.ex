@@ -35,16 +35,15 @@ defmodule Exscheme.Core.Environment do
     raise %ArgumentError{message: "variable: #{variable} not found in the env"}
   end
 
-  def set_variable(variable, eval_in_env, %Environment{} = env) when is_atom(variable) do
+  def set_variable(variable, value, %Environment{} = env) when is_atom(variable) do
     frame = current_frame(env)
 
     case Frame.get(frame, variable) do
       {:ok, _value} ->
-        {value, _env} = eval_in_env.(env)
         update_frame(env, variable, value)
 
       :error ->
-        set_variable(variable, eval_in_env, next_frame(env))
+        set_variable(variable, value, next_frame(env))
     end
   end
 
@@ -57,7 +56,7 @@ defmodule Exscheme.Core.Environment do
   end
 
   def define(name, eval_in_env, env) do
-    {value, _env} = eval_in_env.(env)
+    {value, env} = eval_in_env.(env)
     update_frame(env, name, value)
   end
 
