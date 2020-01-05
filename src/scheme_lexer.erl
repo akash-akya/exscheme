@@ -1,4 +1,4 @@
--file("/usr/local/Cellar/erlang/20.3.6/lib/erlang/lib/parsetools-2.1.6/include/leexinc.hrl", 0).
+-file("/usr/local/Cellar/erlang/21.2.7/lib/erlang/lib/parsetools-2.1.8/include/leexinc.hrl", 0).
 %% The source of this file is part of leex distribution, as such it
 %% has the same Copyright as the other files in the leex
 %% distribution. The Copyright is defined in the accompanying file
@@ -14,7 +14,10 @@
 %% User code. This is placed here to allow extra attributes.
 -file("src/scheme_lexer.xrl", 17).
 
--file("/usr/local/Cellar/erlang/20.3.6/lib/erlang/lib/parsetools-2.1.6/include/leexinc.hrl", 14).
+token_to_string(TokenChars,TokenLen) ->
+    list_to_binary(lists:sublist(TokenChars, 2, TokenLen - 2)).
+
+-file("/usr/local/Cellar/erlang/21.2.7/lib/erlang/lib/parsetools-2.1.8/include/leexinc.hrl", 14).
 
 format_error({illegal,S}) -> ["illegal characters ",io_lib:write_string(S)];
 format_error({user,S}) -> S.
@@ -305,7 +308,7 @@ adjust_line(T, A, [_|Cs], L) ->
 %% return signal either an unrecognised character or end of current
 %% input.
 
--file("src/scheme_lexer.erl", 307).
+-file("src/scheme_lexer.erl", 310).
 yystate() -> 4.
 
 yystate(7, Ics, Line, Tlen, _, _) ->
@@ -411,7 +414,7 @@ yyaction(1, TokenLen, YYtcs, TokenLine) ->
     yyaction_1(TokenChars, TokenLine);
 yyaction(2, TokenLen, YYtcs, TokenLine) ->
     TokenChars = yypre(YYtcs, TokenLen),
-    yyaction_2(TokenChars, TokenLine);
+    yyaction_2(TokenChars, TokenLen, TokenLine);
 yyaction(3, _, _, TokenLine) ->
     yyaction_3(TokenLine);
 yyaction(4, _, _, TokenLine) ->
@@ -430,10 +433,10 @@ yyaction_0(TokenChars, TokenLine) ->
 yyaction_1(TokenChars, TokenLine) ->
      { token, { symbol, TokenLine, list_to_atom (TokenChars) } } .
 
--compile({inline,yyaction_2/2}).
+-compile({inline,yyaction_2/3}).
 -file("src/scheme_lexer.xrl", 10).
-yyaction_2(TokenChars, TokenLine) ->
-     { token, { string, TokenLine, TokenChars } } .
+yyaction_2(TokenChars, TokenLen, TokenLine) ->
+     { token, { string, TokenLine, token_to_string (TokenChars, TokenLen) } } .
 
 -compile({inline,yyaction_3/1}).
 -file("src/scheme_lexer.xrl", 11).
@@ -450,4 +453,4 @@ yyaction_4(TokenLine) ->
 yyaction_5() ->
      skip_token .
 
--file("/usr/local/Cellar/erlang/20.3.6/lib/erlang/lib/parsetools-2.1.6/include/leexinc.hrl", 313).
+-file("/usr/local/Cellar/erlang/21.2.7/lib/erlang/lib/parsetools-2.1.8/include/leexinc.hrl", 313).

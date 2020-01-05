@@ -11,6 +11,10 @@ defmodule Exscheme.InterpreterTest do
     expr = "(+ 1 (* 10 20))"
     {result, _env} = interpret(expr)
     assert result == 201
+
+    expr = "(begin (define name \"something: \\\" (+ 2 3)\") name)"
+    {result, env} = interpret(expr)
+    assert result == "something: \\\" (+ 2 3)"
   end
 
   test "begin" do
@@ -49,6 +53,18 @@ defmodule Exscheme.InterpreterTest do
     expr = "(begin (define num 10) (set! num (+ num 1)) num)"
     {result, _env} = interpret(expr)
     assert result == 11
+
+    expr = """
+    (begin
+      (define num 20)
+      (define increment
+        (lambda () (set! num (+ num 1))))
+      (increment)
+      num)
+    """
+
+    {result, _env} = interpret(expr)
+    assert result == 21
   end
 
   test "lambda" do
