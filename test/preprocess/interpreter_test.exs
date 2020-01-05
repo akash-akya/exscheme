@@ -123,4 +123,23 @@ defmodule Exscheme.InterpreterTest do
     {result, _env} = interpret(expr)
     assert result == 3
   end
+
+  test "garbage collection" do
+    expr = """
+    (begin
+      (define (fact n)
+        (if (< n 2)
+            1
+            (* n (fact (- n 1)))))
+      (fact 5))
+    """
+
+    {result, env} = interpret(expr)
+    assert result == 120
+    assert frames_count(env) == 1
+  end
+
+  defp frames_count(env) do
+    Enum.count(env.frame_map)
+  end
 end

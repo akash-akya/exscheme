@@ -2,7 +2,7 @@ defmodule Exscheme.Core.Environment do
   require Logger
   alias __MODULE__
 
-  defstruct frame_map: %{}, current: nil, counter: 0
+  defstruct frame_map: %{}, current: nil, counter: 0, callstack: []
 
   defmodule Exscheme.Core.Environment.Frame do
     defstruct [:data, :parent]
@@ -81,7 +81,8 @@ defmodule Exscheme.Core.Environment do
     %Environment{
       frame_map: Map.put(env.frame_map, current, frame),
       current: current,
-      counter: env.counter + 1
+      counter: env.counter + 1,
+      callstack: [current | env.callstack]
     }
   end
 end

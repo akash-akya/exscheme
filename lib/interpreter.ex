@@ -3,6 +3,7 @@ defmodule Exscheme.Interpreter do
   alias Exscheme.Core.Primitives
   alias Exscheme.Core.Procedure
   alias Exscheme.Core.Predicate
+  alias Exscheme.Core.GarbageCollector, as: GC
   alias Exscheme.Core.Environment, as: Env
   require Logger
 
@@ -70,11 +71,14 @@ defmodule Exscheme.Interpreter do
   end
 
   def scheme_apply(%Procedure{} = procedure, arguments, env) do
-    current = env.current
+    old_current = env.current
+    old_callstack = env.callstack
+
     frame_data = Enum.zip(procedure.params, arguments) |> Map.new()
     env = Env.push_new_frame(env, frame_data, procedure.current_frame)
     {value, env} = eval_sequence(procedure.body, env)
-    {value, %Env{env | current: current}}
+
+    {value, %Env{env | current: old_current, callstack: old_callstack}}
   end
 
   defp eval_cond(predicate, actions, rest, env) do
@@ -91,6 +95,7 @@ defmodule Exscheme.Interpreter do
 
   defp eval_sequence([action | remaining_actions], env, _value) do
     {value, env} = eval(action, env)
+    env = GC.garbage_collect(env, value)
     eval_sequence(remaining_actions, env, value)
   end
 end
