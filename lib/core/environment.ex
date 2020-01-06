@@ -1,88 +1,95 @@
 defmodule Exscheme.Core.Environment do
   require Logger
+  alias Exscheme.Core.Cons
+  alias Exscheme.Core.HMap
+  alias Exscheme.Core.Memory
   alias __MODULE__
 
-  defstruct frame_map: %{}, current: nil, counter: 0, callstack: []
+  defstruct memory: nil, frames: nil
 
-  defmodule Exscheme.Core.Environment.Frame do
-    defstruct [:data, :parent]
-
-    def get(%__MODULE__{data: data}, variable) do
-      Map.fetch(data, variable)
-    end
-
-    def set(frame, variable, value) do
-      %__MODULE__{frame | data: Map.put(frame.data, variable, value)}
-    end
+  def create do
+    memory = Memory.init()
+    %Environment{memory: memory, frames: nil}
   end
 
-  alias Exscheme.Core.Environment.Frame
+  def find_variable(variable, %Environment{} = env),
+    do: find_variable(variable, env.frames, env.memory)
 
-  def find_variable(variable, %Environment{current: nil}) do
+  def find_variable(variable, nil, _) do
     raise %ArgumentError{message: "variable: #{variable} not found in the env"}
   end
 
-  def find_variable(variable, %Environment{} = env) do
-    frame = current_frame(env)
+  def find_variable(variable, frames, memory) do
+    frame = Cons.car(frames, memory)
 
-    case Frame.get(frame, variable) do
-      {:ok, value} -> value
-      :error -> find_variable(variable, next_frame(env))
+    case HMap.get(frame, variable, memory) do
+      nil -> find_variable(variable, Cons.cdr(frames, memory), memory)
+      value -> unwrap(value)
     end
-  end
-
-  def set_variable(variable, _eval_in_env, %Environment{current: nil}) do
-    raise %ArgumentError{message: "variable: #{variable} not found in the env"}
   end
 
   def set_variable(variable, value, %Environment{} = env) when is_atom(variable) do
-    frame = current_frame(env)
+    memory = set_variable(variable, value, env.frames, env.memory)
+    %Environment{env | memory: memory}
+  end
 
-    case Frame.get(frame, variable) do
-      {:ok, _value} ->
-        update_frame(env, variable, value)
+  def set_variable(variable, _value, nil, _) do
+    raise %ArgumentError{message: "variable: #{variable} not found in the env"}
+  end
 
-      :error ->
-        set_variable(variable, value, next_frame(env))
+  def set_variable(variable, value, frames, memory) when is_atom(variable) do
+    frame = Cons.car(frames, memory)
+
+    case HMap.get(frame, variable, memory) do
+      nil ->
+        set_variable(variable, value, Cons.cdr(frames, memory), memory)
+
+      _ ->
+        HMap.put(frame, variable, wrap(value), memory)
     end
   end
 
-  def push_new_frame(%Environment{} = env, data, parent) do
-    add_frame(env, %Frame{data: data, parent: parent})
+  def extend_env(%Environment{memory: memory, frames: frames}) do
+    {map, memory} = HMap.new(memory)
+    {frames, memory} = Cons.cons(map, frames, memory)
+    %Environment{frames: frames, memory: memory}
+  end
+
+  def extend_env(%Environment{} = env, %{} = data) do
+    env = extend_env(env)
+    Enum.reduce(data, env, fn {variable, value}, env -> define(variable, value, env) end)
+  end
+
+  def extend_env(%Environment{} = env, %{} = data, frames) do
+    extend_env(%Environment{env | frames: frames}, data)
+  end
+
+  def pop_frame(%Environment{frames: frames, memory: memory}) do
+    frames = Cons.cdr(frames, memory)
+    %Environment{frames: frames, memory: memory}
   end
 
   def find_variables(params, env) do
     Enum.map(params, &find_variable(&1, env))
   end
 
-  def define(name, eval_in_env, env) do
-    {value, env} = eval_in_env.(env)
-    update_frame(env, name, value)
+  def define(name, value, %Environment{frames: frames, memory: memory} = env) do
+    frame = Cons.car(env.frames, env.memory)
+    memory = HMap.put(frame, name, wrap(value), memory)
+    memory = Cons.set_car!(frames, frame, memory)
+    %Environment{env | frames: frames, memory: memory}
   end
 
-  defp current_frame(%Environment{} = env), do: env.frame_map[env.current]
+  defp wrap({:primitive, proc}) when is_atom(proc), do: {:primitive, proc}
 
-  defp next_frame(%Environment{} = env) do
-    frame = current_frame(env)
-    %Environment{env | current: frame.parent}
-  end
+  defp wrap(%Exscheme.Core.Procedure{} = term), do: term
 
-  defp update_frame(env, variable, value) do
-    frame =
-      current_frame(env)
-      |> Frame.set(variable, value)
+  defp wrap(term) when is_number(term) or is_nil(term) or is_binary(term),
+    do: {:native, term}
 
-    %Environment{env | frame_map: Map.put(env.frame_map, env.current, frame)}
-  end
+  defp unwrap({:primitive, proc}) when is_atom(proc), do: {:primitive, proc}
 
-  def add_frame(%Environment{} = env, frame) do
-    current = env.counter + 1
+  defp unwrap(%Exscheme.Core.Procedure{} = term), do: term
 
-    %Environment{
-      frame_map: Map.put(env.frame_map, current, frame),
-      current: current,
-      counter: env.counter + 1,
-      callstack: [current | env.callstack]
-    }
-  end
+  defp unwrap({:native, term}), do: term
 end

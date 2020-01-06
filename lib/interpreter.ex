@@ -3,16 +3,17 @@ defmodule Exscheme.Interpreter do
   alias Exscheme.Core.Primitives
   alias Exscheme.Core.Procedure
   alias Exscheme.Core.Predicate
+  alias Exscheme.Core.Cons
   alias Exscheme.Core.GarbageCollector, as: GC
   alias Exscheme.Core.Environment, as: Env
   require Logger
 
   def interpret(str) do
-    env = %Env{}
+    env = Env.create()
 
     str
     |> Parser.parse()
-    |> eval(Env.push_new_frame(env, Primitives.get_primitives(), env.current))
+    |> eval(Env.extend_env(env, Primitives.get_primitives()))
   end
 
   def eval(exp, env) do
@@ -31,16 +32,18 @@ defmodule Exscheme.Interpreter do
         {:ok, Env.set_variable(variable, v, env)}
 
       [:define, [function_name | params] | body] ->
-        {:ok, Env.define(function_name, &eval([:lambda, params | body], &1), env)}
+        {v, env} = eval([:lambda, params | body], env)
+        {:ok, Env.define(function_name, v, env)}
 
       [:define, variable, value] ->
-        {:ok, Env.define(variable, &eval(value, &1), env)}
+        {v, env} = eval(value, env)
+        {:ok, Env.define(variable, v, env)}
 
       [:if, predicate, consequent, alternative] ->
         Predicate.eval_if(predicate, consequent, alternative, &eval/2, env)
 
       [:lambda, params | body] ->
-        {Procedure.new(params, body, env.current), env}
+        {Procedure.new(params, body, env), env}
 
       [:begin | actions] ->
         eval_sequence(actions, env)
@@ -50,9 +53,14 @@ defmodule Exscheme.Interpreter do
         eval_cond(predicate, actions, rest, env)
 
       [operator | operands] ->
+        # Exscheme.Core.Cons.to_native(env.frames, env.memory)
+        # |> IO.inspect()
+
         {procedure, env} = eval(operator, env)
-        {values, env} = get_values(operands, env)
-        scheme_apply(procedure, values, env)
+        Env.define(arg, value, env)
+        {value, env} = scheme_apply(procedure, operands, env)
+        # env = GC.garbage_collect(env, value)
+        {value, env}
     end
   end
 
@@ -66,19 +74,31 @@ defmodule Exscheme.Interpreter do
     {Enum.reverse(result), env}
   end
 
-  def scheme_apply([:primitive, procedure], arguments, env) do
-    {Primitives.apply_primitive(procedure, arguments), env}
+  def scheme_apply({:primitive, procedure}, operands, env) do
+    env = Env.extend_env(env)
+
+    env =
+      operands
+      |> Enum.reduce(env, fn exp, env ->
+        {value, env} = eval(exp, env)
+        Env.define(arg, value, env)
+      end)
+
+    {value, memory} = Primitives.apply_primitive(procedure, values, env.memory)
+    {value, %Env{env | memory: memory}}
   end
 
-  def scheme_apply(%Procedure{} = procedure, arguments, env) do
-    old_current = env.current
-    old_callstack = env.callstack
+  def scheme_apply(%Procedure{} = procedure, operands, env) do
+    env = Env.extend_env(env, %{}, procedure.env)
 
-    frame_data = Enum.zip(procedure.params, arguments) |> Map.new()
-    env = Env.push_new_frame(env, frame_data, procedure.current_frame)
-    {value, env} = eval_sequence(procedure.body, env)
+    env =
+      Enum.zip(procedure.params, operands)
+      |> Enum.reduce(env, fn {arg, exp}, env ->
+        {value, env} = eval(exp, env)
+        Env.define(arg, value, env)
+      end)
 
-    {value, %Env{env | current: old_current, callstack: old_callstack}}
+    eval_sequence(procedure.body, env)
   end
 
   defp eval_cond(predicate, actions, rest, env) do
@@ -95,7 +115,6 @@ defmodule Exscheme.Interpreter do
 
   defp eval_sequence([action | remaining_actions], env, _value) do
     {value, env} = eval(action, env)
-    env = GC.garbage_collect(env, value)
     eval_sequence(remaining_actions, env, value)
   end
 end

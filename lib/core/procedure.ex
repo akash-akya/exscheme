@@ -1,11 +1,11 @@
 defmodule Exscheme.Core.Procedure do
-  defstruct params: nil, body: nil, current_frame: nil
+  defstruct params: nil, body: nil, env: nil
 
-  def new(params, body, current_frame) do
+  def new(params, body, env) do
     %__MODULE__{
       params: params,
       body: body,
-      current_frame: current_frame
+      env: env.frames
     }
   end
 end

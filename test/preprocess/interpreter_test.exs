@@ -57,7 +57,13 @@ defmodule Exscheme.InterpreterTest do
   end
 
   test "nested function" do
-    expr = "(begin (define higher (lambda (x) (lambda (y) (+ x y)))) ((higher 20) 10))"
+    expr = """
+    (begin
+      (define higher
+        (lambda (x) (lambda (y) (+ x y))))
+      ((higher 20) 10))
+    """
+
     {result, _env} = interpret(expr)
     assert result == 30
   end
@@ -136,10 +142,23 @@ defmodule Exscheme.InterpreterTest do
 
     {result, env} = interpret(expr)
     assert result == 120
-    assert frames_count(env) == 1
+    mem_usage = Exscheme.Core.Memory.usage(env.memory)
+
+    expr = """
+    (begin
+      (define (fact n)
+        (if (< n 2)
+            1
+            (* n (fact (- n 1)))))
+      (fact 10))
+    """
+
+    {result, env} = interpret(expr)
+
+    assert Exscheme.Core.Memory.usage(env.memory) == mem_usage
   end
 
   defp frames_count(env) do
-    Enum.count(env.frame_map)
+    Enum.count(env.frames)
   end
 end

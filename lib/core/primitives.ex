@@ -1,32 +1,30 @@
 defmodule Exscheme.Core.Primitives do
-  def apply_primitive(:car, [first | _rest]), do: first
+  alias Exscheme.Core.Cons
 
-  def apply_primitive(:cdr, [_first | rest]), do: rest
+  def apply_primitive(:car, [cons], memory), do: {Cons.car(cons, memory), memory}
 
-  def apply_primitive(:cons, [first, rest]), do: [first | rest]
+  def apply_primitive(:cdr, [cons], memory), do: {Cons.cdr(cons, memory), memory}
 
-  def apply_primitive(:null?, arguments), do: is_nil(arguments)
+  def apply_primitive(:cons, [a, b], memory), do: Cons.cons(a, b, memory)
 
-  def apply_primitive(oper, arguments) do
-    apply(Kernel, oper, arguments)
+  def apply_primitive(:null?, [term], memory), do: {is_nil(term), memory}
+
+  def apply_primitive(oper, arguments, memory) do
+    {apply(Kernel, oper, arguments), memory}
   end
-
-  # def apply_primitive(:-, arguments), do: apply(Kernel, :-, arguments)
-
-  # def apply_primitive(:*, arguments), do: apply(Kernel, :*, arguments)
 
   def get_primitives() do
     %{
-      car: [:primitive, :car],
-      cdr: [:primitive, :cdr],
-      cons: [:primitive, :cons],
-      +: [:primitive, :+],
-      -: [:primitive, :-],
-      *: [:primitive, :*],
-      >: [:primitive, :>],
-      <: [:primitive, :<],
-      =: [:primitive, :==],
-      null?: [:primitive, :null?]
+      car: {:primitive, :car},
+      cdr: {:primitive, :cdr},
+      cons: {:primitive, :cons},
+      +: {:primitive, :+},
+      -: {:primitive, :-},
+      *: {:primitive, :*},
+      >: {:primitive, :>},
+      <: {:primitive, :<},
+      =: {:primitive, :==},
+      null?: {:primitive, :null}
     }
   end
 end
