@@ -43,12 +43,23 @@ defmodule Exscheme.Core.Memory do
 
   def to_native(term, memory) do
     case term do
-      %Cons{} = cons -> Cons.to_native(cons, memory)
-      %HMap{} = map -> HMap.to_native(map, memory)
-      %Procedure{} = proc -> "#<LAMBDA::#{inspect(proc)}>"
-      {:primitive, proc} -> "#<PRIMITIVE::#{inspect(proc)}>"
-      {:native, value} -> value
-      pointer when is_integer(pointer) -> "#<PTR::#{pointer}>"
+      %Cons{} = cons ->
+        Cons.to_native(cons, memory)
+
+      %HMap{} = map ->
+        HMap.to_native(map, memory)
+
+      %Procedure{} = proc ->
+        "#<LAMBDA::#{inspect(proc)}>"
+
+      {:primitive, proc} ->
+        "#<PRIMITIVE::#{inspect(proc)}>"
+
+      {:native, value} ->
+        value
+
+      pointer when is_integer(pointer) ->
+        to_native(get(memory, pointer), memory)
     end
   end
 

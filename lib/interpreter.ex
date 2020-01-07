@@ -17,8 +17,8 @@ defmodule Exscheme.Interpreter do
 
   def eval(exp, vm) do
     case exp do
-      exp when is_number(exp) or is_binary(exp) ->
-        {exp, vm}
+      exp when is_number(exp) or is_binary(exp) or is_nil(exp) or is_boolean(exp) ->
+        {{:native, exp}, vm}
 
       exp when is_atom(exp) ->
         {VM.find_variable(exp, vm), vm}
@@ -71,12 +71,12 @@ defmodule Exscheme.Interpreter do
     {Enum.reverse(result), vm}
   end
 
-  def scheme_apply({:primitive, procedure}, arguments, vm) do
+  defp scheme_apply({:primitive, procedure}, arguments, vm) do
     {value, memory} = Primitives.apply_primitive(procedure, arguments, vm.memory)
     {value, %VM{vm | memory: memory}}
   end
 
-  def scheme_apply(%Procedure{} = procedure, arguments, vm) do
+  defp scheme_apply(%Procedure{} = procedure, arguments, vm) do
     params = Enum.zip(procedure.params, arguments) |> Map.new()
 
     VM.with_env(procedure.env, params, vm, fn vm ->
@@ -84,10 +84,12 @@ defmodule Exscheme.Interpreter do
     end)
   end
 
-  def eval_if(predicate, consequent, alternative, eval, vm) do
+  def to_native(exp, vm), do: Exscheme.Core.Memory.to_native(exp, vm.memory)
+
+  defp eval_if(predicate, consequent, alternative, eval, vm) do
     case eval.(predicate, vm) do
-      {true, vm} -> eval.(consequent, vm)
-      {false, vm} -> eval.(alternative, vm)
+      {{:native, true}, vm} -> eval.(consequent, vm)
+      {{:native, false}, vm} -> eval.(alternative, vm)
     end
   end
 

@@ -10,7 +10,9 @@ defmodule Exscheme.Core.Primitives do
   def apply_primitive(:null?, [term], memory), do: {is_nil(term), memory}
 
   def apply_primitive(oper, arguments, memory) do
-    {apply(Kernel, oper, arguments), memory}
+    arguments = Enum.map(arguments, &Exscheme.Core.Memory.to_native(&1, memory))
+    result = apply(Kernel, oper, arguments)
+    {{:native, result}, memory}
   end
 
   def primitives() do
