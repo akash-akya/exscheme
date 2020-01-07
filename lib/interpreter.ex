@@ -2,119 +2,109 @@ defmodule Exscheme.Interpreter do
   alias Exscheme.Preprocess.Parser
   alias Exscheme.Core.Primitives
   alias Exscheme.Core.Procedure
-  alias Exscheme.Core.Predicate
-  alias Exscheme.Core.Cons
-  alias Exscheme.Core.GarbageCollector, as: GC
-  alias Exscheme.Core.Environment, as: Env
+  alias Exscheme.Core.VM
   require Logger
 
   def interpret(str) do
-    env = Env.create()
+    vm = VM.create()
 
-    str
-    |> Parser.parse()
-    |> eval(Env.extend_env(env, Primitives.get_primitives()))
+    VM.with_env(nil, Primitives.primitives(), vm, fn vm ->
+      str
+      |> Parser.parse()
+      |> eval(vm)
+    end)
   end
 
-  def eval(exp, env) do
+  def eval(exp, vm) do
     case exp do
       exp when is_number(exp) or is_binary(exp) ->
-        {exp, env}
+        {exp, vm}
 
       exp when is_atom(exp) ->
-        {Env.find_variable(exp, env), env}
+        {VM.find_variable(exp, vm), vm}
 
       [:quote | body] ->
-        {body, env}
+        {body, vm}
 
       [:set!, variable, value] ->
-        {v, env} = eval(value, env)
-        {:ok, Env.set_variable(variable, v, env)}
+        {v, vm} = eval(value, vm)
+        {nil, VM.set_variable(variable, v, vm)}
 
       [:define, [function_name | params] | body] ->
-        {v, env} = eval([:lambda, params | body], env)
-        {:ok, Env.define(function_name, v, env)}
+        {v, vm} = eval([:lambda, params | body], vm)
+        {nil, VM.define(function_name, v, vm)}
 
       [:define, variable, value] ->
-        {v, env} = eval(value, env)
-        {:ok, Env.define(variable, v, env)}
+        {v, vm} = eval(value, vm)
+        {nil, VM.define(variable, v, vm)}
 
       [:if, predicate, consequent, alternative] ->
-        Predicate.eval_if(predicate, consequent, alternative, &eval/2, env)
+        eval_if(predicate, consequent, alternative, &eval/2, vm)
 
       [:lambda, params | body] ->
-        {Procedure.new(params, body, env), env}
+        {Procedure.new(params, body, vm), vm}
 
       [:begin | actions] ->
-        eval_sequence(actions, env)
+        eval_sequence(actions, vm)
 
       [:cond | body] ->
         [[predicate | actions] | rest] = body
-        eval_cond(predicate, actions, rest, env)
+        eval_cond(predicate, actions, rest, vm)
 
       [operator | operands] ->
-        # Exscheme.Core.Cons.to_native(env.frames, env.memory)
-        # |> IO.inspect()
+        {procedure, vm} = eval(operator, vm)
+        {values, vm} = get_values(operands, vm)
+        {value, vm} = scheme_apply(procedure, values, vm)
 
-        {procedure, env} = eval(operator, env)
-        Env.define(arg, value, env)
-        {value, env} = scheme_apply(procedure, operands, env)
-        # env = GC.garbage_collect(env, value)
-        {value, env}
+        vm = VM.gc(vm, value)
+        {value, vm}
     end
   end
 
-  defp get_values(operands, env) do
-    {result, env} =
-      Enum.reduce(operands, {[], env}, fn operand, {result, env} ->
-        {value, env} = eval(operand, env)
-        {[value | result], env}
+  defp get_values(operands, vm) do
+    {result, vm} =
+      Enum.reduce(operands, {[], vm}, fn operand, {result, vm} ->
+        {value, vm} = eval(operand, vm)
+        {[value | result], vm}
       end)
 
-    {Enum.reverse(result), env}
+    {Enum.reverse(result), vm}
   end
 
-  def scheme_apply({:primitive, procedure}, operands, env) do
-    env = Env.extend_env(env)
-
-    env =
-      operands
-      |> Enum.reduce(env, fn exp, env ->
-        {value, env} = eval(exp, env)
-        Env.define(arg, value, env)
-      end)
-
-    {value, memory} = Primitives.apply_primitive(procedure, values, env.memory)
-    {value, %Env{env | memory: memory}}
+  def scheme_apply({:primitive, procedure}, arguments, vm) do
+    {value, memory} = Primitives.apply_primitive(procedure, arguments, vm.memory)
+    {value, %VM{vm | memory: memory}}
   end
 
-  def scheme_apply(%Procedure{} = procedure, operands, env) do
-    env = Env.extend_env(env, %{}, procedure.env)
+  def scheme_apply(%Procedure{} = procedure, arguments, vm) do
+    params = Enum.zip(procedure.params, arguments) |> Map.new()
 
-    env =
-      Enum.zip(procedure.params, operands)
-      |> Enum.reduce(env, fn {arg, exp}, env ->
-        {value, env} = eval(exp, env)
-        Env.define(arg, value, env)
-      end)
-
-    eval_sequence(procedure.body, env)
+    VM.with_env(procedure.env, params, vm, fn vm ->
+      eval_sequence(procedure.body, vm)
+    end)
   end
 
-  defp eval_cond(predicate, actions, rest, env) do
+  def eval_if(predicate, consequent, alternative, eval, vm) do
+    case eval.(predicate, vm) do
+      {true, vm} -> eval.(consequent, vm)
+      {false, vm} -> eval.(alternative, vm)
+    end
+  end
+
+  defp eval_cond(predicate, actions, rest, vm) do
     if(predicate == :else) do
-      eval([:begin | actions], env)
+      eval([:begin | actions], vm)
     else
-      Predicate.eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, env)
+      eval_if(predicate, [:begin | actions], [:cond | rest], &eval/2, vm)
     end
   end
 
-  defp eval_sequence(actions, env), do: eval_sequence(actions, env, nil)
+  defp eval_sequence(actions, vm), do: eval_sequence(actions, vm, nil)
 
-  defp eval_sequence([], env, value), do: {value, env}
+  defp eval_sequence([], vm, value), do: {value, vm}
 
-  defp eval_sequence([action | remaining_actions], env, _value) do
-    {value, env} = eval(action, env)
-    eval_sequence(remaining_actions, env, value)
+  defp eval_sequence([action | remaining_actions], vm, _value) do
+    {value, vm} = eval(action, vm)
+    eval_sequence(remaining_actions, vm, value)
   end
 end

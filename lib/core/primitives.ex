@@ -13,7 +13,7 @@ defmodule Exscheme.Core.Primitives do
     {apply(Kernel, oper, arguments), memory}
   end
 
-  def get_primitives() do
+  def primitives() do
     %{
       car: {:primitive, :car},
       cdr: {:primitive, :cdr},

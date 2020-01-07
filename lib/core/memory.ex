@@ -7,7 +7,7 @@ defmodule Exscheme.Core.Memory do
   alias Exscheme.Core.Procedure
 
   def init do
-    malloc(%Memory{}, 20)
+    malloc(%Memory{}, 10)
   end
 
   def put(memory, value) do
@@ -21,13 +21,13 @@ defmodule Exscheme.Core.Memory do
     end
   end
 
-  def get(memory, nil), do: nil
+  def get(_memory, nil), do: nil
 
   def get(memory, pointer) do
     Map.fetch!(memory.heap, pointer)
   end
 
-  def set(memory, nil, value), do: raise("Nil pointer")
+  def set(_memory, nil, _value), do: raise("Nil pointer")
 
   def set(memory, pointer, value) do
     heap = Map.update!(memory.heap, pointer, fn _ -> value end)
@@ -36,10 +36,10 @@ defmodule Exscheme.Core.Memory do
 
   def malloc(memory, size) do
     free = for i <- 1..size, do: memory.counter + i
-    %Memory{memory | free: free ++ memory.free, counter: memory.counter + size}
+    %Memory{memory | free: memory.free ++ free, counter: memory.counter + size}
   end
 
-  def to_native(nil, memory), do: nil
+  def to_native(nil, _memory), do: nil
 
   def to_native(term, memory) do
     case term do
@@ -56,10 +56,10 @@ defmodule Exscheme.Core.Memory do
     Enum.count(memory.heap)
   end
 
-  def free(memory, pointers) do
-    heap = Map.drop(memory.heap, pointers)
-    free = memory.free ++ pointers
+  def retain(memory, pointers) do
+    heap = Map.take(memory.heap, pointers)
+    free = Map.drop(memory.heap, pointers) |> Map.keys()
 
-    %Memory{heap: heap, free: free}
+    %Memory{memory | heap: heap, free: memory.free ++ free}
   end
 end

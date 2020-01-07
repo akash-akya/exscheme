@@ -14,15 +14,15 @@ defmodule Exscheme.Core.Cons do
   def car(%Cons{head: ptr}, memory), do: Memory.get(memory, ptr)
   def cdr(%Cons{tail: ptr}, memory), do: Memory.get(memory, ptr)
 
-  def set_car!(%Cons{head: ptr_a, tail: ptr_b}, a, memory) do
+  def set_car!(%Cons{head: ptr_a}, a, memory) do
     Memory.set(memory, ptr_a, a)
   end
 
-  def set_cdr!(%Cons{head: ptr_a, tail: ptr_b}, b, memory) do
+  def set_cdr!(%Cons{tail: ptr_b}, b, memory) do
     Memory.set(memory, ptr_b, b)
   end
 
-  def to_native(%Cons{head: head, tail: tail} = cons, memory) do
+  def to_native(%Cons{head: head, tail: tail}, memory) do
     [
       Memory.to_native(Memory.get(memory, head), memory)
       | Memory.to_native(Memory.get(memory, tail), memory)

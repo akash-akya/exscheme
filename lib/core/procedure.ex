@@ -5,7 +5,7 @@ defmodule Exscheme.Core.Procedure do
     %__MODULE__{
       params: params,
       body: body,
-      env: env.frames
+      env: hd(env.stack)
     }
   end
 end

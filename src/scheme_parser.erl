@@ -4,7 +4,7 @@
 
 extract_token({_Token, _Line, Value}) -> Value.
 
--file("/usr/local/Cellar/erlang/21.2.7/lib/erlang/lib/parsetools-2.1.8/include/yeccpre.hrl", 0).
+-file("/Users/akash/.asdf/installs/erlang/22.1.1/lib/parsetools-2.1.8/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
 %%
