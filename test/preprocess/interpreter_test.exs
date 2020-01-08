@@ -15,7 +15,7 @@ defmodule Exscheme.InterpreterTest do
 
     expr = "(begin (define name \"something: \\\" (+ 2 3)\") name)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == "something: \\\" (+ 2 3)"
+    assert to_native(result, vm) == "something: \" (+ 2 3)"
   end
 
   test "begin" do

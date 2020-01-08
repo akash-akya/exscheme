@@ -1,4 +1,4 @@
-defmodule Exscheme.Preprocess.Parser do
+defmodule Exscheme.Preprocess.Parse do
   require Logger
 
   def parse(str) when is_binary(str) do

@@ -6,12 +6,12 @@ defmodule Exscheme.Interpreter do
   require Logger
 
   def interpret(str) do
+    {:ok, [sexp], "", %{}, _, _} = Parser.parse(str)
+
     vm = VM.create()
 
     VM.with_env(nil, Primitives.primitives(), vm, fn vm ->
-      str
-      |> Parser.parse()
-      |> eval(vm)
+      eval(sexp, vm)
     end)
   end
 
