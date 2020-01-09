@@ -1,5 +1,6 @@
 defmodule Exscheme.Core.HMap do
   alias Exscheme.Core.Memory
+  alias Exscheme.Core.Nil
   alias __MODULE__
 
   defstruct ptr: %{}
@@ -12,21 +13,21 @@ defmodule Exscheme.Core.HMap do
   def put(map, key, value, memory) do
     data = Memory.get(memory, map.ptr)
 
-    case data[key] do
-      nil ->
-        {ptr_a, memory} = Memory.put(memory, value)
-        Memory.set(memory, map.ptr, Map.put(data, key, ptr_a))
+    case Map.get(data, key, :not_found) do
+      :not_found ->
+        {pointer, memory} = Memory.put(memory, value)
+        Memory.set(memory, map.ptr, Map.put(data, key, pointer))
 
-      key_ptr ->
-        Memory.set(memory, key_ptr, value)
+      key_pointer ->
+        Memory.set(memory, key_pointer, value)
     end
   end
 
   def get(map, key, memory) do
     data = Memory.get(memory, map.ptr)
 
-    case Map.get(data, key) do
-      nil -> nil
+    case Map.get(data, key, :not_found) do
+      :not_found -> :not_found
       pointer -> Memory.get(memory, pointer)
     end
   end
@@ -35,11 +36,15 @@ defmodule Exscheme.Core.HMap do
     data = Memory.get(memory, map.ptr)
     Memory.set(memory, map.ptr, Map.delete(data, key))
   end
+end
 
-  def to_native(%HMap{ptr: pointer}, memory) do
+defimpl Exscheme.Core.Type, for: Exscheme.Core.HMap do
+  alias Exscheme.Core.Memory
+
+  def to_native(%Exscheme.Core.HMap{ptr: pointer}, memory) do
     Memory.get(memory, pointer)
     |> Enum.map(fn {key, pointer} ->
-      {key, Memory.to_native(Memory.get(memory, pointer), memory)}
+      {key, Exscheme.Core.Type.to_native(Memory.get(memory, pointer), memory)}
     end)
     |> Map.new()
   end

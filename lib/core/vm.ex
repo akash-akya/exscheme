@@ -3,19 +3,21 @@ defmodule Exscheme.Core.VM do
   alias Exscheme.Core.Cons
   alias Exscheme.Core.HMap
   alias Exscheme.Core.Memory
+  alias Exscheme.Core.Nil
   alias __MODULE__
 
   defstruct memory: nil, stack: []
 
   def create do
     memory = Memory.init()
-    %VM{memory: memory, stack: []}
+    %VM{memory: memory, stack: [%Nil{}]}
   end
 
-  def find_variable(variable, %VM{} = vm),
-    do: find_variable(variable, hd(vm.stack), vm.memory)
+  def find_variable(variable, %VM{} = vm) do
+    find_variable(variable, hd(vm.stack), vm.memory)
+  end
 
-  def find_variable(variable, nil, _) do
+  def find_variable(variable, %Nil{}, _memory) do
     raise %ArgumentError{message: "variable: #{variable} not found in the env"}
   end
 
@@ -23,7 +25,7 @@ defmodule Exscheme.Core.VM do
     frame = Cons.car(env, memory)
 
     case HMap.get(frame, variable, memory) do
-      nil -> find_variable(variable, Cons.cdr(env, memory), memory)
+      :not_found -> find_variable(variable, Cons.cdr(env, memory), memory)
       value -> value
     end
   end
@@ -33,7 +35,7 @@ defmodule Exscheme.Core.VM do
     %VM{vm | memory: memory}
   end
 
-  def set_variable(variable, _value, nil, _) do
+  def set_variable(variable, _value, %Nil{}, _memory) do
     raise %ArgumentError{message: "variable: #{variable} not found in the env"}
   end
 
@@ -41,7 +43,7 @@ defmodule Exscheme.Core.VM do
     frame = Cons.car(env, memory)
 
     case HMap.get(frame, variable, memory) do
-      nil ->
+      :not_found ->
         set_variable(variable, value, Cons.cdr(env, memory), memory)
 
       _ ->
@@ -54,6 +56,7 @@ defmodule Exscheme.Core.VM do
     frame = Cons.car(env, vm.memory)
     memory = HMap.put(frame, name, value, memory)
     memory = Cons.set_car!(env, frame, memory)
+
     %VM{vm | memory: memory}
   end
 

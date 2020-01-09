@@ -4,6 +4,10 @@ defmodule Exscheme.Core.GarbageCollector do
   alias Exscheme.Core.Cons
   alias Exscheme.Core.HMap
   alias Exscheme.Core.Procedure
+  alias Exscheme.Core.Native
+  alias Exscheme.Core.Pointer
+  alias Exscheme.Core.Primitive
+  alias Exscheme.Core.Nil
 
   def garbage_collect(stack, memory) do
     visited =
@@ -32,7 +36,7 @@ defmodule Exscheme.Core.GarbageCollector do
     end)
   end
 
-  defp visit(pointer, memory, visited) when is_integer(pointer) do
+  defp visit(%Pointer{} = pointer, memory, visited) do
     if MapSet.member?(visited, pointer) do
       visited
     else
@@ -40,5 +44,7 @@ defmodule Exscheme.Core.GarbageCollector do
     end
   end
 
-  defp visit(_pointer, _memory, visited), do: visited
+  defp visit(%Native{}, _memory, visited), do: visited
+  defp visit(%Primitive{}, _memory, visited), do: visited
+  defp visit(%Nil{}, _memory, visited), do: visited
 end

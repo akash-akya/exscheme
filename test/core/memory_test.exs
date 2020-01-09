@@ -1,23 +1,24 @@
 defmodule Exscheme.Core.MemoryTest do
   use ExUnit.Case
   alias Exscheme.Core.Memory
+  alias Exscheme.Core.Pointer
 
   test "put" do
     {ptr, memory} = Memory.put(%Memory{}, 10)
-    assert memory.heap[ptr] == 10
+    assert memory.heap[ptr.point] == 10
   end
 
   test "get" do
     memory = %Memory{heap: %{10 => "test"}}
-    assert Memory.get(memory, 10) == "test"
+    assert Memory.get(memory, Pointer.new(10)) == "test"
   end
 
   test "set" do
-    {ptr, memory} = Memory.put(%Memory{}, 10)
-    assert memory.heap[ptr] == 10
+    {%Pointer{} = ptr, memory} = Memory.put(%Memory{}, 10)
+    assert memory.heap[ptr.point] == 10
 
     memory = Memory.set(memory, ptr, 20)
-    assert memory.heap[ptr] == 20
+    assert memory.heap[ptr.point] == 20
   end
 
   test "malloc" do

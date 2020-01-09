@@ -3,31 +3,32 @@ defmodule Exscheme.InterpreterTest do
   import Exscheme.Interpreter
   require Logger
   alias Exscheme.Core.Cons
+  alias Exscheme.Core.Type
 
   test "simple sexp" do
     expr = "(+ 1 3)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 4
+    assert Type.to_native(result, vm) == 4
 
     expr = "(+ 1 (* 10 20))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 201
+    assert Type.to_native(result, vm) == 201
 
     expr = "(begin (define name \"something: \\\" (+ 2 3)\") name)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == "something: \" (+ 2 3)"
+    assert Type.to_native(result, vm) == "something: \" (+ 2 3)"
   end
 
   test "begin" do
     expr = "(begin (define a 100) (define b 20) (* a b))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 2000
+    assert Type.to_native(result, vm) == 2000
   end
 
   test "fact" do
     expr = "(begin (define fact (lambda (n) (if (< n 2) 1 (* n (fact (- n 1)))))) (fact 4))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 24
+    assert Type.to_native(result, vm) == 24
   end
 
   test "closure" do
@@ -41,7 +42,7 @@ defmodule Exscheme.InterpreterTest do
     """
 
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 12
+    assert Type.to_native(result, vm) == 12
 
     expr = """
     (begin
@@ -54,7 +55,7 @@ defmodule Exscheme.InterpreterTest do
     """
 
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 22
+    assert Type.to_native(result, vm) == 22
   end
 
   test "nested function" do
@@ -66,27 +67,27 @@ defmodule Exscheme.InterpreterTest do
     """
 
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 30
+    assert Type.to_native(result, vm) == 30
   end
 
   test "define" do
     expr = "(begin (define num 10) num)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 10
+    assert Type.to_native(result, vm) == 10
 
     expr = "(begin (define num (+ 10 5)) num)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 15
+    assert Type.to_native(result, vm) == 15
   end
 
   test "set" do
     expr = "(begin (define num 10) (set! num 1) num)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 1
+    assert Type.to_native(result, vm) == 1
 
     expr = "(begin (define num 10) (set! num (+ num 1)) num)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 11
+    assert Type.to_native(result, vm) == 11
 
     expr = """
     (begin
@@ -98,37 +99,37 @@ defmodule Exscheme.InterpreterTest do
     """
 
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 21
+    assert Type.to_native(result, vm) == 21
   end
 
   test "lambda" do
     expr = "(begin (define (a x) (+ 1 x)) (a 30))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 31
+    assert Type.to_native(result, vm) == 31
   end
 
   test "if" do
     expr = "(if (> 10 5) 1 2)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 1
+    assert Type.to_native(result, vm) == 1
 
     expr = "(if (< 10 5) 1 2)"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 2
+    assert Type.to_native(result, vm) == 2
   end
 
   test "cond" do
     expr = "(cond ((= 2 1) 1) ((= 2 2) 2))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 2
+    assert Type.to_native(result, vm) == 2
 
     expr = "(cond ((= 1 1) 1) ((= 2 2) 2))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 1
+    assert Type.to_native(result, vm) == 1
 
     expr = "(cond ((= 0 1) 1) ((= 0 2) 2) (else 3))"
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 3
+    assert Type.to_native(result, vm) == 3
   end
 
   test "cons" do
@@ -142,7 +143,7 @@ defmodule Exscheme.InterpreterTest do
 
     {result, vm} = interpret(expr)
     assert %Cons{} = result
-    assert Cons.to_native(result, vm.memory) == [2, 1 | nil]
+    assert Type.to_native(result, vm.memory) == [2, 1 | nil]
   end
 
   test "garbage collection" do
@@ -156,7 +157,7 @@ defmodule Exscheme.InterpreterTest do
     """
 
     {result, vm} = interpret(expr)
-    assert to_native(result, vm) == 120
+    assert Type.to_native(result, vm) == 120
     mem_usage = Exscheme.Core.Memory.usage(vm.memory)
 
     expr = """

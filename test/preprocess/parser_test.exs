@@ -55,5 +55,11 @@ defmodule Exscheme.Preprocess.ParserTest do
     assert [:+, [:*, 10.0, 10.0], [:-, 20.0, 10.0], 10.0] == exp |> parse() |> unwrap()
   end
 
-  def unwrap({:ok, [result], "", %{}, _, _}), do: result
+  def unwrap({:ok, [result], "", %{}, _, _}), do: result |> untag()
+
+  def untag([]), do: []
+  def untag([term | rest]), do: [untag(term) | untag(rest)]
+  def untag(%Exscheme.Core.Native{value: value}), do: value
+  def untag(%Exscheme.Core.Nil{}), do: nil
+  def untag(term) when is_atom(term), do: term
 end

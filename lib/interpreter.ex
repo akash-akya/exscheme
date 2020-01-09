@@ -1,7 +1,9 @@
 defmodule Exscheme.Interpreter do
   alias Exscheme.Preprocess.Parser
-  alias Exscheme.Core.Primitives
+  alias Exscheme.Core.Primitive
   alias Exscheme.Core.Procedure
+  alias Exscheme.Core.Native
+  alias Exscheme.Core.Nil
   alias Exscheme.Core.VM
   require Logger
 
@@ -10,15 +12,18 @@ defmodule Exscheme.Interpreter do
 
     vm = VM.create()
 
-    VM.with_env(nil, Primitives.primitives(), vm, fn vm ->
+    VM.with_env(%Nil{}, Primitive.primitives(), vm, fn vm ->
       eval(sexp, vm)
     end)
   end
 
   def eval(exp, vm) do
     case exp do
-      exp when is_number(exp) or is_binary(exp) or is_nil(exp) or is_boolean(exp) ->
-        {{:native, exp}, vm}
+      %Native{} = exp ->
+        {exp, vm}
+
+      %Nil{} = exp ->
+        {exp, vm}
 
       exp when is_atom(exp) ->
         {VM.find_variable(exp, vm), vm}
@@ -28,15 +33,15 @@ defmodule Exscheme.Interpreter do
 
       [:set!, variable, value] ->
         {v, vm} = eval(value, vm)
-        {nil, VM.set_variable(variable, v, vm)}
+        {%Nil{}, VM.set_variable(variable, v, vm)}
 
       [:define, [function_name | params] | body] ->
         {v, vm} = eval([:lambda, params | body], vm)
-        {nil, VM.define(function_name, v, vm)}
+        {%Nil{}, VM.define(function_name, v, vm)}
 
       [:define, variable, value] ->
         {v, vm} = eval(value, vm)
-        {nil, VM.define(variable, v, vm)}
+        {%Nil{}, VM.define(variable, v, vm)}
 
       [:if, predicate, consequent, alternative] ->
         eval_if(predicate, consequent, alternative, &eval/2, vm)
@@ -71,8 +76,8 @@ defmodule Exscheme.Interpreter do
     {Enum.reverse(result), vm}
   end
 
-  defp scheme_apply({:primitive, procedure}, arguments, vm) do
-    {value, memory} = Primitives.apply_primitive(procedure, arguments, vm.memory)
+  defp scheme_apply(%Primitive{} = procedure, arguments, vm) do
+    {value, memory} = Primitive.papply(procedure, arguments, vm.memory)
     {value, %VM{vm | memory: memory}}
   end
 
@@ -84,12 +89,10 @@ defmodule Exscheme.Interpreter do
     end)
   end
 
-  def to_native(exp, vm), do: Exscheme.Core.Memory.to_native(exp, vm.memory)
-
   defp eval_if(predicate, consequent, alternative, eval, vm) do
     case eval.(predicate, vm) do
-      {{:native, true}, vm} -> eval.(consequent, vm)
-      {{:native, false}, vm} -> eval.(alternative, vm)
+      {%Native{value: true}, vm} -> eval.(consequent, vm)
+      {%Native{value: false}, vm} -> eval.(alternative, vm)
     end
   end
 
@@ -101,7 +104,7 @@ defmodule Exscheme.Interpreter do
     end
   end
 
-  defp eval_sequence(actions, vm), do: eval_sequence(actions, vm, nil)
+  defp eval_sequence(actions, vm), do: eval_sequence(actions, vm, %Nil{})
 
   defp eval_sequence([], vm, value), do: {value, vm}
 

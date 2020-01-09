@@ -21,11 +21,15 @@ defmodule Exscheme.Core.Cons do
   def set_cdr!(%Cons{tail: ptr_b}, b, memory) do
     Memory.set(memory, ptr_b, b)
   end
+end
 
-  def to_native(%Cons{head: head, tail: tail}, memory) do
+defimpl Exscheme.Core.Type, for: Exscheme.Core.Cons do
+  alias Exscheme.Core.Memory
+
+  def to_native(%Exscheme.Core.Cons{head: head, tail: tail}, memory) do
     [
-      Memory.to_native(Memory.get(memory, head), memory)
-      | Memory.to_native(Memory.get(memory, tail), memory)
+      Exscheme.Core.Type.to_native(Memory.get(memory, head), memory)
+      | Exscheme.Core.Type.to_native(Memory.get(memory, tail), memory)
     ]
   end
 end

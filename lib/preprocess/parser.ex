@@ -18,6 +18,7 @@ defmodule Exscheme.Preprocess.Parser do
     |> optional(concat(ascii_string([?.], 1), integer(min: 1)))
     |> reduce({Enum, :join, []})
     |> post_traverse({:to_number, []})
+    |> reduce({Exscheme.Core.Native, :tag, []})
 
   string =
     ignore(ascii_string([?"], 1))
@@ -30,6 +31,7 @@ defmodule Exscheme.Preprocess.Parser do
     )
     |> ignore(ascii_string([?"], 1))
     |> reduce({List, :to_string, []})
+    |> reduce({Exscheme.Core.Native, :tag, []})
 
   quoted =
     ignore(ascii_string([?\'], 1))
@@ -60,6 +62,10 @@ defmodule Exscheme.Preprocess.Parser do
   defp to_number(_rest, [arg], context, _line, _offset) do
     {number, ""} = Float.parse(arg)
     {[number], context}
+  end
+
+  defp to_atom(_rest, ["nil"], context, _line, _offset) do
+    {[%Exscheme.Core.Nil{}], context}
   end
 
   defp to_atom(_rest, [arg], context, _line, _offset) do
