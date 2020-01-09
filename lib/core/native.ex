@@ -8,4 +8,5 @@ end
 
 defimpl Exscheme.Core.Type, for: Exscheme.Core.Native do
   def to_native(%Exscheme.Core.Native{value: value}, _memory), do: value
+  def collect(_, _memory, visited), do: visited
 end

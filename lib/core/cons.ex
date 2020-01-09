@@ -24,12 +24,18 @@ defmodule Exscheme.Core.Cons do
 end
 
 defimpl Exscheme.Core.Type, for: Exscheme.Core.Cons do
+  alias Exscheme.Core.Type
   alias Exscheme.Core.Memory
 
   def to_native(%Exscheme.Core.Cons{head: head, tail: tail}, memory) do
     [
-      Exscheme.Core.Type.to_native(Memory.get(memory, head), memory)
-      | Exscheme.Core.Type.to_native(Memory.get(memory, tail), memory)
+      Type.to_native(Memory.get(memory, head), memory)
+      | Type.to_native(Memory.get(memory, tail), memory)
     ]
+  end
+
+  def collect(cons, memory, visited) do
+    visited = Type.collect(cons.head, memory, visited)
+    Type.collect(cons.tail, memory, visited)
   end
 end

@@ -48,4 +48,13 @@ defimpl Exscheme.Core.Type, for: Exscheme.Core.HMap do
     end)
     |> Map.new()
   end
+
+  def collect(hmap, memory, visited) do
+    visited = MapSet.put(visited, hmap.ptr)
+
+    Memory.get(memory, hmap.ptr)
+    |> Enum.reduce(visited, fn {_, pointer}, visited ->
+      Exscheme.Core.Type.collect(pointer, memory, visited)
+    end)
+  end
 end

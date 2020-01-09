@@ -12,4 +12,5 @@ end
 
 defimpl Exscheme.Core.Type, for: Exscheme.Core.Procedure do
   def to_native(proc, _memory), do: "#<LAMBDA::#{inspect(proc)}>"
+  def collect(proc, memory, visited), do: Exscheme.Core.Type.collect(proc.env, memory, visited)
 end
